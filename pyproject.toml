@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ieqstar"
+authors = [
+    {name = "Jun Jiang", email = "jun.jiang@eonerc.rwth-aachen.de"},
+]
+description = "Indoor Environmental Quality – Subject Test Archive and Repository"
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["subject test", "data structure"]
+license = "MIT License"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "pydantic"
+]
+dynamic = ["version"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
