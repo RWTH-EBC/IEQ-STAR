@@ -9,7 +9,7 @@ from ieqstar.metadata.subject import SubjectBase, Gender
 def valid_data() -> dict:
     """Valid data of a subject"""
     return {
-        'last_name': 'Mustermann',
+        'last_name_at_birth': 'Mustermann',
         'first_name': 'Max',
         'middle_name': 'Maria',
         'birth_date': '1992-05-20',
@@ -24,18 +24,19 @@ def valid_data() -> dict:
 
 
 class TestInstantiation:
-    """Verifies instantiation of SubjectBase"""
+    """Verify instantiation of SubjectBase"""
     def test_from_dict(self, valid_data):
         """Instantiation of SubjectBase from a dictionary"""
         subject = SubjectBase(**valid_data)
-        assert subject.last_name == "Mustermann"
+        assert subject.last_name_at_birth == "Mustermann"
+        assert subject.last_name == "Mustermann"  # Confirm default value set as last_name_of_birth
         assert subject.first_name == "Max"
         assert subject.middle_name == "Maria"
         assert subject.birth_date == date(1992, 5, 20)
         assert subject.gender == Gender.MALE
         assert subject.registration_date == date.today()
-        assert subject.height_logs[0].height == 1.79  # Confirms rounding to 2 decimals
-        assert subject.weight_logs[0].weight == 67.9  # Confirms rounding to 1 decimal
+        assert subject.height_logs[0].height == 1.79  # Confirm rounding to 2 decimals
+        assert subject.weight_logs[0].weight == 67.9  # Confirm rounding to 1 decimal
 
     def test_from_json(self, valid_data):
         """Instantiation of SubjectBase from a JSON string"""
@@ -45,14 +46,14 @@ class TestInstantiation:
 
 
 class TestNameRegexPatterns:
-    """Verifies name regex behavior"""
+    """Verify name regex behavior"""
     @pytest.mark.parametrize(
         "name",
         ["Álvaro", "Müller", "Smith Brown", "Smith-Brown", "O'Connor"]
     )
     def test_valid(self, valid_data, name):
-        """Validates international unicode-compliant name variations"""
-        valid_data['last_name'] = name
+        """Validate international unicode-compliant name variations"""
+        valid_data['last_name_at_birth'] = name
         subject = SubjectBase(**valid_data)
         assert subject.last_name == name
 
@@ -61,14 +62,14 @@ class TestNameRegexPatterns:
         ["Smith123", "Smith  Brown", "Smith-", " Smith", "O' Connor"]
     )
     def test_invalid(self, valid_data, name):
-        """Ensures structural name violations trigger validation errors"""
-        valid_data['last_name'] = name
+        """Ensure structural name violations trigger validation errors"""
+        valid_data['last_name_at_birth'] = name
         with pytest.raises(ValidationError):
             SubjectBase(**valid_data)
 
 
 def test_unique_dates_validator(valid_data):
-    """Confirms duplicate logging dates fail custom array validations"""
+    """Confirm duplicate logging dates fail custom array validations"""
     valid_data['height_logs'] = [
         {'log_date': '2026-03-01' , 'height': 1.75},
         {'log_date': '2026-03-01' , 'height': 1.85},  # Duplicate log_date
@@ -79,7 +80,7 @@ def test_unique_dates_validator(valid_data):
 
 
 def test_future_dates_blocked(valid_data):
-    """Ensures date of birth cannot accidentally sit in the future"""
+    """Ensure date of birth cannot accidentally sit in the future"""
     tomorrow = date.today() + timedelta(days=1)
     valid_data['birth_date'] = tomorrow.strftime("%Y-%m-%d")
     with pytest.raises(ValidationError):
@@ -87,16 +88,16 @@ def test_future_dates_blocked(valid_data):
 
 
 @pytest.mark.parametrize(
-    "first_name, last_name, expected_pii",
+    "first_name, last_name_at_birth, expected_pii",
     [
         ('Max', 'Mustermann' , 'max|mustermann|1992-05-20|m'),
         ('Hans-Peter', 'Müller-Maier', 'hanspeter|müllermaier|1992-05-20|m')
     ]
 )
-def test_computed_fields_and_id_generation(valid_data, first_name, last_name, expected_pii):
-    """Checks predictability of generated internal cryptographic PII tokens."""
+def test_computed_fields_and_id_generation(valid_data, first_name, last_name_at_birth, expected_pii):
+    """Check predictability of generated internal cryptographic PII tokens."""
     valid_data['first_name'] = first_name
-    valid_data['last_name'] = last_name
+    valid_data['last_name_at_birth'] = last_name_at_birth
     subject = SubjectBase(**valid_data)
     assert subject.pii == expected_pii
     assert len(subject.id_full) == 64
@@ -105,7 +106,7 @@ def test_computed_fields_and_id_generation(valid_data, first_name, last_name, ex
 
 
 def test_frozen_fields(valid_data):
-    """Ensures identity immutability settings block accidental runtime edits."""
+    """Ensure identity immutability settings block accidental runtime edits."""
     subject = SubjectBase(**valid_data)
     with pytest.raises(ValidationError):
         subject.first_name = "Alexander"

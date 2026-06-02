@@ -2,7 +2,7 @@ from abc import ABC
 from datetime import date
 from enum import Enum
 import hashlib
-from pydantic import BaseModel, ConfigDict, Field, AliasChoices, field_validator, computed_field
+from pydantic import BaseModel, ConfigDict, Field, AliasChoices, field_validator, model_validator, computed_field
 
 
 class Sex(str, Enum):
@@ -86,24 +86,34 @@ class SubjectBase(BaseModel):
     )
 
     # Names
-    last_name: str = Field(
+    last_name_at_birth: str = Field(
         frozen=True,
+        title='Last name at birth',
+        description='Last name at birth (required field)',
+        validation_alias=AliasChoices('last name at birth', 'birth name', 'birth surname', 'maiden name'),
+        min_length=1,
+        max_length=35,  # Ref: https://archive.datadictionary.nhs.uk/DD%20Release%20November%202025/data_elements/person_family_name__at_birth_.html
+        pattern=r"^[^\W\d_]+([ '-][^\W\d_]+)*$"
+    )
+
+    last_name: str | None = Field(
+        default=None,
         title='Last name',
-        description='Last name (required field)',
+        description='Last name, default same as last name at birth',
         validation_alias=AliasChoices('last name', 'family name', 'surname'),
         min_length=1,
         max_length=35,  # Ref: https://archive.datadictionary.nhs.uk/DD%20Release%20November%202025/data_elements/patient_family_name.html
         pattern=r"^[^\W\d_]+([ '-][^\W\d_]+)*$"
     )
-    last_name_at_birth: str | None = Field(
-        default=None,
-        title='Last name at birth',
-        description='Last name at birth',
-        validation_alias=AliasChoices('birth name', 'birth surname', 'maiden name'),
-        min_length=1,
-        max_length=35,  # Ref: https://archive.datadictionary.nhs.uk/DD%20Release%20November%202025/data_elements/person_family_name__at_birth_.html
-        pattern=r"^[^\W\d_]+([ '-][^\W\d_]+)*$"
-    )
+
+    # Set default last name
+    @model_validator(mode='after')
+    def set_default_last_name(self) -> 'SubjectBase':
+        """Set default last name same as last name at birth"""
+        if self.last_name is None:
+            self.last_name = self.last_name_at_birth
+        return self
+
     first_name: str = Field(
         frozen=True,
         title='First name',
@@ -113,6 +123,7 @@ class SubjectBase(BaseModel):
         max_length=35,  # Ref: https://archive.datadictionary.nhs.uk/DD%20Release%20November%202025/data_elements/patient_given_name.html
         pattern=r"^[^\W\d_]+([ '-][^\W\d_]+)*$"
     )
+
     middle_name: str | None = Field(
         default=None,
         title='Middle name',
@@ -141,6 +152,7 @@ class SubjectBase(BaseModel):
         description='Genotypic (chromosomal) sex, generally as male or female, according to the chromosomal complement',
         validation_alias=AliasChoices('sex at birth', 'birth sex', 'natal sex', 'biological sex')
     )
+
     gender: Gender = Field(
         title='Gender',
         description='Gender identity (required field), which refers to self-representation influenced by social, '
@@ -155,21 +167,12 @@ class SubjectBase(BaseModel):
         description='Historical logs of height',
         validation_alias=AliasChoices('height logs', 'heights')
     )
+
     weight_logs: list[WeightLog] = Field(
         default_factory=list,
         title='Weight logs',
         description='Historical logs of weight',
         validation_alias=AliasChoices('weight logs', 'weights')
-    )
-
-    # Documents of metadata
-    registration_date: date = Field(
-        default=date.today(),
-        title='Date of registration',
-        description='Date of registration (automatically assigned when generating the instance)',
-        validation_alias=AliasChoices('registration date', 'date of registration'),
-        ge=date(1900, 1, 1),
-        le=date.today(),
     )
 
     # Validate unique log dates for all logs
@@ -187,6 +190,15 @@ class SubjectBase(BaseModel):
                 dates_found.add(record.log_date)
         return logs
 
+    # Documents of metadata
+    registration_date: date = Field(
+        default=date.today(),
+        title='Date of registration',
+        description='Date of registration (automatically assigned when generating the instance)',
+        validation_alias=AliasChoices('registration date', 'date of registration'),
+        ge=date(1900, 1, 1),
+        le=date.today(),
+    )
 
     # Identifiers
     @computed_field
@@ -209,11 +221,11 @@ class SubjectBase(BaseModel):
             return mapping[gender]
 
         first_name_pii = keep_only_characters(self.first_name).lower()
-        last_name_pii = keep_only_characters(self.last_name).lower()
+        last_name_at_birth_pii = keep_only_characters(self.last_name_at_birth).lower()
         birth_data_pii = self.birth_date.strftime('%Y-%m-%d')
         gender_pii = get_gender_abbr(self.gender)
 
-        return f"{first_name_pii}|{last_name_pii}|{birth_data_pii}|{gender_pii}"
+        return f"{first_name_pii}|{last_name_at_birth_pii}|{birth_data_pii}|{gender_pii}"
 
     @computed_field
     @property
