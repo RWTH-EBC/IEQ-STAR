@@ -179,15 +179,18 @@ class SubjectBase(BaseModel):
     @field_validator('height_logs', 'weight_logs')
     @classmethod
     def validate_unique_dates_of_logs(cls, logs: list[MeasurementLog]) -> list[MeasurementLog]:
-        """Ensure all log dates in a historical logs are unique"""
+        # Sort the original list in-place from min to max based on log_date
+        logs.sort(key=lambda log: log.log_date)
+
+        # Ensure all log dates in a historical logs are unique
         dates_found = set()
-        for record in logs:
-            if record.log_date in dates_found:
+        for log in logs:
+            if log.log_date in dates_found:
                 raise ValueError(
-                    f"Duplicated log entry: historical log found for date {record.log_date.strftime('%Y-%m-%d')}"
+                    f"Duplicated log entry: historical log found for date {log.log_date.strftime('%Y-%m-%d')}"
                 )
             else:
-                dates_found.add(record.log_date)
+                dates_found.add(log.log_date)
         return logs
 
     # Documents of metadata
