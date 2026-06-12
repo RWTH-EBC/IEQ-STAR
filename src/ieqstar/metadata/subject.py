@@ -2,7 +2,9 @@ from abc import ABC
 from datetime import date
 from enum import Enum
 import hashlib
-from pydantic import BaseModel, ConfigDict, Field, AliasChoices, field_validator, model_validator, computed_field
+from pydantic import (BaseModel, ConfigDict, Field, AliasChoices, field_validator, model_validator, computed_field,
+                      EmailStr)
+from pydantic_extra_types.phone_numbers import PhoneNumber
 
 
 class Sex(str, Enum):
@@ -192,6 +194,21 @@ class SubjectBase(BaseModel):
             else:
                 dates_found.add(log.log_date)
         return logs
+
+    # Contact
+    phone: PhoneNumber | None = Field(
+        default=None,
+        title='Phone',
+        description='Phone number',
+        validation_alias=AliasChoices('phone number'),
+    )
+
+    email: EmailStr | None = Field(
+        default=None,
+        title='Email',
+        description='Email address',
+        validation_alias=AliasChoices('Email', 'E-Mail', 'E-mail'),
+    )
 
     # Documents of metadata
     registration_date: date = Field(

@@ -16,10 +16,16 @@ def valid_data() -> dict:
         'gender': 'male',
         'height_logs': [
             {'log_date': '2026-01-01', 'height': 1.789},
+            {'log_date': '2026-03-01', 'height': 1.78},
+            {'log_date': '2026-02-01', 'height': 1.79},
         ],
         'weight_logs': [
             {'log_date': '2026-01-01', 'weight': 67.89},
+            {'log_date': '2026-03-01', 'weight': 68.0},
+            {'log_date': '2026-02-01', 'weight': 67.8},
         ],
+        'phone': '+4917612345678',
+        'email': 'max.mustermann@sub-domain.domain.de',
     }
 
 
@@ -36,7 +42,11 @@ class TestInstantiation:
         assert subject.gender == Gender.MALE
         assert subject.registration_date == date.today()
         assert subject.height_logs[0].height == 1.79  # Confirm rounding to 2 decimals
+        assert subject.height_logs[-1].log_date == date(2026, 3, 1)  # Confirm date sorted in ascending sequence
         assert subject.weight_logs[0].weight == 67.9  # Confirm rounding to 1 decimal
+        assert subject.weight_logs[-1].log_date == date(2026, 3, 1)  # Confirm date sorted in ascending sequence
+        assert subject.phone == "tel:+49-176-12345678"
+        assert subject.email == "max.mustermann@sub-domain.domain.de"
 
     def test_from_json(self, valid_data):
         """Instantiation of SubjectBase from a JSON string"""
