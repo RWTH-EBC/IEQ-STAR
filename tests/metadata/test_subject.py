@@ -51,7 +51,8 @@ class TestInstantiation:
     def test_from_json(self, valid_data):
         """Instantiation of SubjectBase from a JSON string"""
         subject_from_dict = SubjectBase(**valid_data)
-        subject_from_json = SubjectBase.model_validate_json(json.dumps(valid_data))
+        json_string = json.dumps(valid_data)
+        subject_from_json = SubjectBase.model_validate_json(json_string)
         assert subject_from_json == subject_from_dict
 
 
