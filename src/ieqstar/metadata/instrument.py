@@ -102,7 +102,7 @@ class SensorAccuracyByRange(BaseModel):
             raise ValueError(f"Error combination {self.error_combination} not implemented")
 
 
-class Sensor(Device):
+class SensorBase(Device):
     """Sensor and transducer"""
     id: str | None = Field(
         default=None,
@@ -155,7 +155,7 @@ class Sensor(Device):
     )
 
     @model_validator(mode='after')
-    def validate_accuracies(self) -> 'Sensor':
+    def validate_accuracies(self) -> 'SensorBase':
         # Sort the original list in-place from min to max
         self.accuracies.sort(key=lambda acc: acc.range[0])
 
@@ -218,7 +218,7 @@ class Sensor(Device):
 class InstrumentBase(Device):
     """Measuring instrument, consisting of single or multiple sensors for single or multiple measurands"""
     # Sensors
-    sensors: list[Sensor] = Field(
+    sensors: list[SensorBase] = Field(
         default_factory=list,
         title='Sensors',
         description='Sensors of the instrument (required field)',

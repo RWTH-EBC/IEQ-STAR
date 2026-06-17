@@ -2,7 +2,7 @@ from datetime import date
 import json
 import pytest
 from pydantic import ValidationError
-from src.ieqstar.metadata.instrument import InstrumentBase, Sensor, SensorAccuracyByRange
+from src.ieqstar.metadata.instrument import InstrumentBase, SensorBase, SensorAccuracyByRange
 
 
 @pytest.fixture
@@ -84,7 +84,7 @@ class TestInstantiation:
         assert instrument.manufacturer == 'Test Mfr'
         assert instrument.model_name == 'Test Instrument'
         assert instrument.serial_number == 'S/N 1234 5678'
-        assert isinstance(instrument.sensors[0], Sensor)  # Confirm type of sensor instance
+        assert isinstance(instrument.sensors[0], SensorBase)  # Confirm type of sensor instance
         assert instrument.sensors[0].manufacturer == 'Test Mfr'
         assert instrument.sensors[0].model_name == 'Test Sen CO2'
         assert instrument.sensors[0].serial_number == 'S/N 1234'
@@ -110,28 +110,28 @@ class TestSensorSetup:
         """Verify invalid sensor range"""
         valid_co2_sensor_data['range'] = (5000, 0)
         with pytest.raises(ValidationError) as e:
-            Sensor(**valid_co2_sensor_data)
+            SensorBase(**valid_co2_sensor_data)
         assert "Minimum range value 5000.0 must be strictly less than maximum range value 0.0" in str(e.value)
 
     def test_range_accuracy_inconsistent_min(self, valid_co2_sensor_data):
         """Verify inconsistency between sensor range and minimal accuracy range"""
         valid_co2_sensor_data['accuracies'][0]['range'] = (-500, 5_000)
         with pytest.raises(ValidationError) as e:
-            Sensor(**valid_co2_sensor_data)
+            SensorBase(**valid_co2_sensor_data)
         assert "Inconsistent minimal measurement range" in str(e.value)
 
     def test_range_accuracy_inconsistent_max(self, valid_co2_sensor_data):
         """Verify inconsistency between sensor range and maximal accuracy range"""
         valid_co2_sensor_data['accuracies'][-1]['range'] = (5_001, 8_000)
         with pytest.raises(ValidationError) as e:
-            Sensor(**valid_co2_sensor_data)
+            SensorBase(**valid_co2_sensor_data)
         assert "Inconsistent maximal measurement range" in str(e.value)
 
     def test_range_accuracy_discontinuous(self, valid_co2_sensor_data):
         """Verify discontinoous accuracy ranges"""
         valid_co2_sensor_data['accuracies'][-1]['range'] = (5_000, 10_000)
         with pytest.raises(ValidationError) as e:
-            Sensor(**valid_co2_sensor_data)
+            SensorBase(**valid_co2_sensor_data)
         assert "Discontinuous definition of accuracy" in str(e.value)
 
     @pytest.mark.parametrize(
@@ -140,7 +140,7 @@ class TestSensorSetup:
     )
     def test_calculate_error_add(self, valid_co2_sensor_data, measured_value, expected_error):
         """Verify error calculation with 'add' function"""
-        sensor_co2 = Sensor(**valid_co2_sensor_data)
+        sensor_co2 = SensorBase(**valid_co2_sensor_data)
         assert sensor_co2.calculate_error(measured_value) == pytest.approx(expected_error)
 
     @pytest.mark.parametrize(
@@ -151,12 +151,12 @@ class TestSensorSetup:
         """Verify error calculation with 'max' function"""
         for acc in valid_co2_sensor_data['accuracies']:
             acc['error_combination'] = 'max'
-        sensor_co2 = Sensor(**valid_co2_sensor_data)
+        sensor_co2 = SensorBase(**valid_co2_sensor_data)
         assert sensor_co2.calculate_error(measured_value) == pytest.approx(expected_error)
 
     def test_calculate_error_out_of_bounds(self, valid_co2_sensor_data):
         """Verify error calculation with measured value out of bounds"""
-        sensor_co2 = Sensor(**valid_co2_sensor_data)
+        sensor_co2 = SensorBase(**valid_co2_sensor_data)
         with pytest.raises(ValueError) as e:
             sensor_co2.calculate_error(measured_value=20_000)
         assert "does not match any accuracy ranges" in str(e.value)
@@ -164,6 +164,6 @@ class TestSensorSetup:
     def test_accuracies_sorting(self, valid_co2_sensor_data):
         """Verify accuracies sorted correctly"""
         valid_co2_sensor_data['accuracies'].reverse()
-        sensor_co2 = Sensor(**valid_co2_sensor_data)
+        sensor_co2 = SensorBase(**valid_co2_sensor_data)
         assert sensor_co2.accuracies[0].range == (0, 5_000)
         assert sensor_co2.accuracies[1].range == (5_001, 10_000)

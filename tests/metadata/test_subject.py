@@ -2,7 +2,7 @@ from datetime import date, timedelta
 import json
 import pytest
 from pydantic import ValidationError
-from ieqstar.metadata.subject import SubjectBase, Gender
+from src.ieqstar.metadata.subject import SubjectBase, Gender
 
 
 @pytest.fixture
