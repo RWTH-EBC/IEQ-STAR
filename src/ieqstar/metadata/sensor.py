@@ -1,44 +1,6 @@
-from abc import ABC
 from datetime import date
 from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, AliasChoices, field_validator, model_validator
-
-
-class Device(BaseModel, ABC):
-    """Measuring device, e.g. sensor and measuring instrument"""
-    # Pydantic configuration
-    model_config = ConfigDict(
-        validate_assignment=True,
-        validate_by_name=True,
-    )
-
-    # Manufacture
-    manufacturer: str = Field(
-        title='Manufacturer',
-        description='Manufacturer (required field)',
-        validation_alias=AliasChoices('mfr.', 'mfr'),
-        min_length=1,
-        max_length=50,
-    )
-
-    model_name: str | None = Field(
-        default=None,
-        title='Model',
-        description='Model type, which describes the general characteristics and technical specifications shared by an '
-                    'entire batch or line of instruments',
-        validation_alias=AliasChoices('model', 'type', 'type code', 'module', 'module type', 'part number', 'P/N', 'PN'),
-        min_length=1,
-        max_length=50,
-    )
-
-    serial_number: str | None = Field(
-        default=None,
-        title='Serial number',
-        description='Serial number, which is a completely unique identifier assigned to one specific instrument',
-        validation_alias=AliasChoices('serial number', 'S/N', 'SN'),
-        min_length=1,
-        max_length=50,
-    )
 
 
 class SensorAccuracyErrorCombination(str, Enum):
@@ -102,13 +64,47 @@ class SensorAccuracyByRange(BaseModel):
             raise ValueError(f"Error combination {self.error_combination} not implemented")
 
 
-class SensorBase(Device):
-    """Sensor and transducer"""
-    id: str | None = Field(
-        default=None,
+class SensorBase(BaseModel):
+    """Sensor or transducer"""
+    # Pydantic configuration
+    model_config = ConfigDict(
+        validate_assignment=True,
+        validate_by_name=True,
+    )
+
+    id: str = Field(
         title='ID',
-        description='ID to distinguish sensors in an instrument',
+        description='ID to distinguish sensors (required field)',
         validation_alias=AliasChoices('ID'),
+    )
+
+    # Manufacture
+    manufacturer: str = Field(
+        title='Manufacturer',
+        description='Manufacturer (required field)',
+        validation_alias=AliasChoices('mfr.', 'mfr'),
+        min_length=1,
+        max_length=50,
+    )
+
+    model_name: str | None = Field(
+        default=None,
+        title='Model',
+        description='Model type, which describes the general characteristics and technical specifications shared by an '
+                    'entire batch or line of instruments',
+        validation_alias=AliasChoices('model', 'type', 'type code', 'module', 'module type', 'part number', 'P/N',
+                                      'PN'),
+        min_length=1,
+        max_length=50,
+    )
+
+    serial_number: str | None = Field(
+        default=None,
+        title='Serial number',
+        description='Serial number, which is a completely unique identifier assigned to one specific instrument',
+        validation_alias=AliasChoices('serial number', 'S/N', 'SN'),
+        min_length=1,
+        max_length=50,
     )
 
     measurand: str = Field(
@@ -213,14 +209,3 @@ class SensorBase(Device):
 
         raise ValueError(
             f"Measured value {measured_value} {self.unit} does not match any accuracy ranges for this sensor")
-
-
-class InstrumentBase(Device):
-    """Measuring instrument, consisting of single or multiple sensors for single or multiple measurands"""
-    # Sensors
-    sensors: list[SensorBase] = Field(
-        default_factory=list,
-        title='Sensors',
-        description='Sensors of the instrument (required field)',
-        min_length=1,
-    )
