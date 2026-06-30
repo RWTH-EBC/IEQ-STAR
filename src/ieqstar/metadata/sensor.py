@@ -72,12 +72,6 @@ class SensorBase(BaseModel):
         validate_by_name=True,
     )
 
-    id: str = Field(
-        title='ID',
-        description='ID to distinguish sensors (required field)',
-        validation_alias=AliasChoices('ID'),
-    )
-
     # Manufacture
     manufacturer: str = Field(
         title='Manufacturer',

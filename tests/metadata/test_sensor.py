@@ -2,14 +2,13 @@ from datetime import date
 import json
 import pytest
 from pydantic import ValidationError
-from src.ieqstar.metadata.sensor import SensorBase, SensorAccuracyByRange
+from ieqstar.metadata.sensor import SensorBase, SensorAccuracyByRange
 
 
 @pytest.fixture
 def valid_data() -> dict:
     """Valid data of a CO2 sensor as example"""
     return {
-        'id': 'Test',
         'manufacturer': 'Test Mfr',
         'model_name': 'Test Sen CO2',
         'serial_number': 'S/N 1234 5678',
@@ -41,7 +40,6 @@ class TestInstantiation:
     def test_from_dict(self, valid_data):
         """Instantiation of InstrumentBase from a dictionary"""
         sensor = SensorBase(**valid_data)
-        assert sensor.id == 'Test'
         assert sensor.manufacturer == 'Test Mfr'
         assert sensor.model_name == 'Test Sen CO2'
         assert sensor.serial_number == 'S/N 1234 5678'
