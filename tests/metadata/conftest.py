@@ -26,7 +26,7 @@ def valid_data_subject() -> dict:
 
 @pytest.fixture
 def valid_data_sensor_co2() -> dict:
-    """Valid data of a CO2 sensor as example"""
+    """Valid data of a CO2 sensor"""
     return {
         'manufacturer': 'Test Mfr',
         'model_name': 'Test Sen CO2',
@@ -52,4 +52,28 @@ def valid_data_sensor_co2() -> dict:
         'sensing_technology': 'NDIR',
         'note': 'Operating tempearture -5 °C to +50 °C',
         'calibration_date': '2026-01-01',
+    }
+
+@pytest.fixture
+def valid_data_sensor_temperature() -> dict:
+    """Valid data of a temperature sensor"""
+    return {
+        'manufacturer': 'Test Mfr',
+        'model_name': 'Test Sen T',
+        'serial_number': 'S/N T123 456',
+        'measurand': 'Temperature',
+        'unit': 'degC',
+        'range': (-50, 400),
+        'resolution': 0.1,
+        'accuracies': [
+            {
+                'range': (-50, 400),
+                'absolute_error': 0.3,
+                'relative_error': 0.005,
+                'error_combination': 'add',
+            }
+        ],
+        'sensing_technology': 'Pt100',
+        'note': 'Class B according to IEC 60751',
+        'calibration_date': '2026-02-01',
     }

@@ -7,12 +7,37 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_serialize
 from . import field, sensor, subject
 
 
-class BodyPart(str, Enum):
-    """Subject body part for sensor installation"""
-    # TODO: finish the enumeration: 25 positions
-    # TODO: Class name -> sensor position on the body
-    HAND_L = 'hand_left'
-    HAND_R = 'hand_right'
+class SubjectSensorPosition(str, Enum):
+    """Position for sensor installation on subject"""
+    FOREHEAD = 'forehead'
+    NECK = 'neck'
+
+    COLLARBONE_BELOW = 'collarbone_below'
+    SCAPULA = 'scapula'
+    NAVEL_BESIDE = 'navel_beside'
+    LUMBAR_REGION = 'lumbar_region'
+
+    UPPER_ARM_LEFT = 'upper_arm_left'
+    UPPER_ARM_RIGHT = 'upper_arm_right'
+    LOWER_ARM_LEFT = 'lower_arm_left'
+    LOWER_ARM_RIGHT = 'lower_arm_right'
+    HAND_BACK_LEFT = 'hand_back_left'
+    HAND_BACK_RIGHT = 'hand_back_right'
+
+    POSTERIOR = 'posterior'
+
+    THIGH_FRONT_LEFT = 'thigh_front_left'
+    THIGH_FRONT_RIGHT = 'thigh_front_right'
+    THIGH_BACK_LEFT = 'thigh_back_left'
+    THIGH_BACK_RIGHT = 'thigh_back_right'
+    SHIN_LEFT = 'shin_left'
+    SHIN_RIGHT = 'shin_right'
+    CALF_LEFT = 'calf_left'
+    CALF_RIGHT = 'calf_right'
+    INSTEP_LEFT = 'instep_left'
+    INSTEP_RIGHT = 'instep_right'
+    FOOT_BOTTOM_LEFT = 'foot_bottom_left'
+    FOOT_BOTTOM_RIGHT = 'foot_bottom_right'
 
 
 class SubjectSensor(sensor.SensorBase):
@@ -23,7 +48,7 @@ class SubjectSensor(sensor.SensorBase):
         min_length=1,
     )
 
-    position: BodyPart = Field(
+    position: SubjectSensorPosition = Field(
         title='Position',
         description='Sensor position installed on subject (required field)',
         validation_alias=AliasChoices('pos'),
@@ -34,7 +59,7 @@ class SubjectSensor(sensor.SensorBase):
             cls,
             sensor_base: sensor.SensorBase,
             id_setup: str,
-            position: BodyPart
+            position: SubjectSensorPosition
     ):
         """Create SubjectSensor from SensorBase"""
         return cls(
