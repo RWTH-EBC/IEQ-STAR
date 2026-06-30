@@ -1,8 +1,10 @@
-from datetime import date
 import json
+from datetime import date
+
 import pytest
 from pydantic import ValidationError
-from ieqstar.metadata.sensor import SensorBase, SensorAccuracyByRange
+
+from ieqstar.metadata.sensor import SensorAccuracyByRange, SensorBase
 
 
 class TestInstantiation:

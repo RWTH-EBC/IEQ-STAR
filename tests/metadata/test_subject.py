@@ -1,8 +1,10 @@
-from datetime import date, timedelta
 import json
+from datetime import date, timedelta
+
 import pytest
 from pydantic import ValidationError
-from ieqstar.metadata.subject import SubjectBase, Gender
+
+from ieqstar.metadata.subject import Gender, SubjectBase
 
 
 class TestInstantiation:

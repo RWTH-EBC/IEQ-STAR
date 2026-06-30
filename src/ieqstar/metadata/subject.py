@@ -1,9 +1,18 @@
+import hashlib
 from abc import ABC
 from datetime import date
 from enum import Enum
-import hashlib
-from pydantic import (BaseModel, ConfigDict, Field, AliasChoices, field_validator, model_validator, computed_field,
-                      EmailStr)
+
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 from pydantic_extra_types.phone_numbers import PhoneNumber
 
 

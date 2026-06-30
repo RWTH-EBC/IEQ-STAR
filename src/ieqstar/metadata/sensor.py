@@ -1,6 +1,7 @@
 from datetime import date
 from enum import Enum
-from pydantic import BaseModel, ConfigDict, Field, AliasChoices, field_validator, model_validator
+
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class SensorAccuracyErrorCombination(str, Enum):
@@ -162,7 +163,7 @@ class SensorBase(BaseModel):
             )
 
         # Check if accuracy profiles are continuously on the measurement range
-        for i, acc in enumerate(self.accuracies):
+        for i in range(len(self.accuracies)):
             if i > 0 and self.accuracies[i - 1].range[1] + self.resolution != self.accuracies[i].range[0]:
                 raise ValueError(
                     f"Discontinuous definition of accuracy between ranges ({self.accuracies[i - 1].range[0]}, "

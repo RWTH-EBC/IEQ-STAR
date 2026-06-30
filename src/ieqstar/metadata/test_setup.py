@@ -1,13 +1,16 @@
-from enum import Enum
 from datetime import datetime, tzinfo
+from enum import Enum
 from zoneinfo import ZoneInfo
-from . import subject, sensor, field
-from pydantic import BaseModel, ConfigDict, Field, AliasChoices, field_validator, model_validator, field_serializer
+
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
+
+from . import field, sensor, subject
 
 
 class BodyPart(str, Enum):
     """Subject body part for sensor installation"""
-    # TODO: finish the enumeration
+    # TODO: finish the enumeration: 25 positions
+    # TODO: Class name -> sensor position on the body
     HAND_L = 'hand_left'
     HAND_R = 'hand_right'
 

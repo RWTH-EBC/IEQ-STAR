@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, AliasChoices, computed_field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, computed_field
 
 
 class FieldBase(BaseModel):
