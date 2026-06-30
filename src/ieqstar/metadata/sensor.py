@@ -193,6 +193,7 @@ class SensorBase(BaseModel):
         description='Calibration date of the sensor',
         validation_alias=AliasChoices('calibration date', 'date of calibration'),
         ge=date(1900, 1, 1),
+        le=date.today()
     )
 
     def calculate_error(self, measured_value: float) -> float:
