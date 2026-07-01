@@ -42,15 +42,15 @@ class SubjectSensorPosition(str, Enum):
 
 class SubjectSensor(sensor.SensorBase):
     id_setup: str = Field(
-        title='ID in test setup',
-        description='ID to distinguish sensors on subject for test setup (required field)',
+        title='ID setup',
+        description='ID to distinguish sensors on subject in field for subject test setup (required field)',
         validation_alias=AliasChoices('ID setup', 'ID'),
         min_length=1,
     )
 
     position: SubjectSensorPosition = Field(
         title='Position',
-        description='Sensor position installed on subject (required field)',
+        description='Sensor position installed on subject in field (required field)',
         validation_alias=AliasChoices('pos'),
     )
 
@@ -69,10 +69,10 @@ class SubjectSensor(sensor.SensorBase):
         )
 
 
-class TestSubject(subject.SubjectBase):
+class FieldSubject(subject.SubjectBase):
     id_setup: str = Field(
-        title='ID in test setup',
-        description='ID to distinguish subjects in field for test setup (required field)',
+        title='ID setup',
+        description='ID to distinguish subjects in field for subject test setup (required field)',
         validation_alias=AliasChoices('ID setup', 'ID'),
         min_length=1,
     )
@@ -86,7 +86,7 @@ class TestSubject(subject.SubjectBase):
     subject_sensors: list[SubjectSensor] = Field(
         default_factory=list,
         title='Subject sensors',
-        description='Sensors installed on subject',
+        description='Sensors installed on subject in field',
         validation_alias=AliasChoices('subject sensors', 'sensors'),
     )
 
@@ -98,7 +98,7 @@ class TestSubject(subject.SubjectBase):
             position: str,
             subject_sensors: list[SubjectSensor] | None = None,
     ):
-        """Create TestSubject from SubjectBase"""
+        """Create FieldSubject from SubjectBase"""
         return cls(
             **subject_base.model_dump(),
             id_setup=id_setup,
@@ -109,8 +109,8 @@ class TestSubject(subject.SubjectBase):
 
 class FieldSensor(sensor.SensorBase):
     id_setup: str = Field(
-        title='ID in test setup',
-        description='ID to distinguish sensors in field for test setup (required field)',
+        title='ID setup',
+        description='ID to distinguish sensors in field for subject test setup (required field)',
         validation_alias=AliasChoices('ID setup', 'ID'),
         min_length=1,
     )
@@ -136,23 +136,23 @@ class FieldSensor(sensor.SensorBase):
         )
 
 
-class TestField(field.FieldBase):
+class SetupField(field.FieldBase):
     id_setup: str = Field(
-        title='ID in test setup',
-        description='ID to distinguish fields for test setup (required field)',
+        title='ID setup',
+        description='ID to distinguish fields for subject test setup (required field)',
     )
 
-    test_subjects: list[TestSubject] = Field(
+    field_subjects: list[FieldSubject] = Field(
         default_factory=list,
-        title='Test subjects',
-        description='Test subjects in field',
-        validation_alias=AliasChoices('test subjects', 'subjects'),
+        title='Field subjects',
+        description='Subjects in field',
+        validation_alias=AliasChoices('field subjects', 'subjects'),
     )
 
     field_sensors: list[FieldSensor] = Field(
         default_factory=list,
         title='Field sensors',
-        description='Field sensors in field',
+        description='Sensors in field',
         validation_alias=AliasChoices('field sensors', 'sensors')
     )
 
@@ -160,18 +160,18 @@ class TestField(field.FieldBase):
     def from_field_base(
             cls,
             field_base: field.FieldBase,
-            test_subjects: list[TestSubject] | None = None,
+            field_subjects: list[FieldSubject] | None = None,
             field_sensors: list[FieldSensor] | None = None,
     ):
-        """Create TestField from FieldBase"""
+        """Create SetupField from FieldBase"""
         return cls(
             **field_base.model_dump(),
-            test_subjects=test_subjects or [],
+            field_subjects=field_subjects or [],
             field_sensors=field_sensors or [],
         )
 
 
-class TestSetupBase(BaseModel):
+class SetupBase(BaseModel):
     # Pydantic configuration
     model_config = ConfigDict(
         validate_assignment=True,
@@ -180,8 +180,8 @@ class TestSetupBase(BaseModel):
     )
 
     id_setup: str = Field(
-        title='ID in test setup',
-        description='ID to distinguish test setups (required field)',
+        title='ID setup',
+        description='ID to distinguish subject test setups (required field)',
         validation_alias=AliasChoices('ID setup', 'ID'),
     )
 
@@ -211,7 +211,7 @@ class TestSetupBase(BaseModel):
 
     start_time: datetime = Field(
         title='Start time',
-        description='Start time of test',
+        description='Start time of subject test',
         validation_alias=AliasChoices('start time', 't_start'),
         ge=datetime(1900, 1, 1, 0, 0, 0),
         le=datetime.now(),
@@ -219,23 +219,23 @@ class TestSetupBase(BaseModel):
 
     end_time: datetime = Field(
         title='End time',
-        description='End time of test',
+        description='End time of subject test',
         validation_alias=AliasChoices('end time', 't_end'),
         ge=datetime(1900, 1, 1, 0, 0, 0),
         le=datetime.now(),
     )
 
     @model_validator(mode='after')
-    def validate_start_end_time(self) -> 'TestSetupBase':
+    def validate_start_end_time(self) -> 'SetupBase':
         if self.start_time >= self.end_time:
-            raise ValueError(f"Start time of test {self.start_time} must be earlier than end time {self.end_time}")
+            raise ValueError(f"Start time of setup {self.start_time} must be earlier than end time {self.end_time}")
         return self
 
-    # Test fields
-    test_fields: list[TestField] = Field(
+    # Setup fields
+    setup_fields: list[SetupField] = Field(
         default_factory=list,
-        title='Test fields',
-        description='Test fields, which consist of test subjects and field sensors',
-        validation_alias=AliasChoices('test fields', 'fields'),
+        title='Setup fields',
+        description='Subject test setup fields, which consist of field subjects and field sensors',
+        validation_alias=AliasChoices('setup fields', 'fields'),
         min_length=1,
     )

@@ -77,3 +77,12 @@ def valid_data_sensor_temperature() -> dict:
         'note': 'Class B according to IEC 60751',
         'calibration_date': '2026-02-01',
     }
+
+@pytest.fixture
+def valid_data_field() -> dict:
+    """Valid data of a field"""
+    return {
+        'length': 2.0,
+        'width': 2.0,
+        'height': 2.5,
+    }

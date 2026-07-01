@@ -8,9 +8,9 @@ from ieqstar.metadata.sensor import SensorAccuracyByRange, SensorBase
 
 
 class TestInstantiation:
-    """Verify instantiation of InstrumentBase"""
+    """Verify instantiation of SensorBase"""
     def test_from_dict(self, valid_data_sensor_co2):
-        """Instantiation of InstrumentBase from a dictionary"""
+        """Instantiation of SensorBase from a dictionary"""
         sensor = SensorBase(**valid_data_sensor_co2)
         assert sensor.manufacturer == 'Test Mfr'
         assert sensor.model_name == 'Test Sen CO2'
@@ -24,7 +24,7 @@ class TestInstantiation:
         assert sensor.accuracies[0].range == (0, 5000)
 
     def test_from_json(self, valid_data_sensor_co2):
-        """Instantiation of InstrumentBase from a JSON string"""
+        """Instantiation of SensorBase from a JSON string"""
         sensor_from_dict = SensorBase(**valid_data_sensor_co2)
         json_string = json.dumps(valid_data_sensor_co2)
         sensor_from_json = SensorBase.model_validate_json(json_string)
