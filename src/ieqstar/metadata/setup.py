@@ -160,12 +160,14 @@ class SetupField(field.FieldBase):
     def from_field_base(
             cls,
             field_base: field.FieldBase,
+            id_setup: str,
             field_subjects: list[FieldSubject] | None = None,
             field_sensors: list[FieldSensor] | None = None,
     ):
         """Create SetupField from FieldBase"""
         return cls(
             **field_base.model_dump(),
+            id_setup=id_setup,
             field_subjects=field_subjects or [],
             field_sensors=field_sensors or [],
         )
