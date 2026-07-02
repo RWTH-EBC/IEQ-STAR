@@ -9,17 +9,18 @@ def valid_data_subject() -> dict:
         'first_name': 'Max',
         'middle_name': 'Maria',
         'birth_date': '1992-05-20',
+        'sex': 'male',
         'gender': 'male',
-        'height_logs': [
-            {'log_date': '2026-01-01', 'height': 1.789},
-            {'log_date': '2026-03-01', 'height': 1.78},
-            {'log_date': '2026-02-01', 'height': 1.79},
-        ],
-        'weight_logs': [
-            {'log_date': '2026-01-01', 'weight': 67.89},
-            {'log_date': '2026-03-01', 'weight': 68.0},
-            {'log_date': '2026-02-01', 'weight': 67.8},
-        ],
+        'height_logs': {
+            '2026-01-01': 1.789,
+            '2026-03-01': 1.78,
+            '2026-02-01': 1.79,
+        },
+        'weight_logs': {
+            '2026-01-01': 67.89,
+            '2026-03-01': 68.0,
+            '2026-02-01': 67.8,
+        },
         'phone': '+4917612345678',
         'email': 'max.mustermann@sub-domain.domain.de',
     }

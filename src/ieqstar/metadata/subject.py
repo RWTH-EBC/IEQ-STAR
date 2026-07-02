@@ -1,19 +1,19 @@
 import hashlib
-from abc import ABC
 from datetime import date
 from enum import Enum
 
 from pydantic import (
     AliasChoices,
-    BaseModel,
-    ConfigDict,
     EmailStr,
     Field,
+    TypeAdapter,
     computed_field,
     field_validator,
     model_validator,
 )
 from pydantic_extra_types.phone_numbers import PhoneNumber
+
+from . import base
 
 
 class Sex(str, Enum):
@@ -38,64 +38,7 @@ class Gender(str, Enum):
     NOT_STATED = 'not-stated'  # Asked but declined to provide a response
 
 
-class MeasurementLog(BaseModel, ABC):
-    """Single log of a measurement, e.g. height and weight"""
-    # Pydantic configuration
-    model_config = ConfigDict(
-        validate_assignment=True,
-        validate_by_name=True,
-    )
-
-    log_date: date = Field(
-        title='Log date',
-        description='Log date (required field)',
-        validation_alias=AliasChoices('log date', 'date'),
-        ge=date(1900, 1, 1),
-        le=date.today(),
-    )
-
-
-class HeightLog(MeasurementLog):
-    """Single log of a measurement of height"""
-    height: float = Field(
-        title='Height',
-        description='Height in m (required field)',
-        ge=0.50,
-        le=2.50,
-    )
-
-    # Round the height value
-    @field_validator('height')
-    @classmethod
-    def round_height(cls, v: float) -> float:
-        # Round value to two decimals
-        return round(v, 2)
-
-
-class WeightLog(MeasurementLog):
-    """Single log of a measurement of weight"""
-    weight: float = Field(
-        title='Weight',
-        description='Weight in kg (required field)',
-        ge=5.0,
-        le=250.0,
-    )
-
-    # Round the weight value
-    @field_validator('weight')
-    @classmethod
-    def round_weight(cls, v: float) -> float:
-        # Round value to one decimal
-        return round(v, 1)
-
-
-class SubjectBase(BaseModel):
-    # Pydantic configuration
-    model_config = ConfigDict(
-        validate_assignment=True,
-        validate_by_name=True,
-    )
-
+class SubjectBase(base.MetadataBase):
     # Names
     last_name_at_birth: str = Field(
         frozen=True,
@@ -104,7 +47,7 @@ class SubjectBase(BaseModel):
         validation_alias=AliasChoices('last name at birth', 'birth name', 'birth surname', 'maiden name'),
         min_length=1,
         max_length=35,  # Ref: https://archive.datadictionary.nhs.uk/DD%20Release%20November%202025/data_elements/person_family_name__at_birth_.html
-        pattern=r"^[^\W\d_]+([ '-][^\W\d_]+)*$"
+        pattern=r"^[^\W\d_]+([ '-][^\W\d_]+)*$",
     )
 
     last_name: str | None = Field(
@@ -114,7 +57,7 @@ class SubjectBase(BaseModel):
         validation_alias=AliasChoices('last name', 'family name', 'surname'),
         min_length=1,
         max_length=35,  # Ref: https://archive.datadictionary.nhs.uk/DD%20Release%20November%202025/data_elements/patient_family_name.html
-        pattern=r"^[^\W\d_]+([ '-][^\W\d_]+)*$"
+        pattern=r"^[^\W\d_]+([ '-][^\W\d_]+)*$",
     )
 
     # Set default last name
@@ -132,7 +75,7 @@ class SubjectBase(BaseModel):
         validation_alias=AliasChoices('first name', 'given name', 'forename'),
         min_length=1,
         max_length=35,  # Ref: https://archive.datadictionary.nhs.uk/DD%20Release%20November%202025/data_elements/patient_given_name.html
-        pattern=r"^[^\W\d_]+([ '-][^\W\d_]+)*$"
+        pattern=r"^[^\W\d_]+([ '-][^\W\d_]+)*$",
     )
 
     middle_name: str | None = Field(
@@ -142,7 +85,7 @@ class SubjectBase(BaseModel):
         validation_alias=AliasChoices('middle name', 'second name', 'second given name'),
         min_length=1,
         max_length=255,
-        pattern=r"^[^\W\d_]+([ '-][^\W\d_]+)*$"
+        pattern=r"^[^\W\d_]+([ '-][^\W\d_]+)*$",
     )
 
     # Birth
@@ -161,7 +104,7 @@ class SubjectBase(BaseModel):
         default=None,
         title='Sex',
         description='Genotypic (chromosomal) sex, generally as male or female, according to the chromosomal complement',
-        validation_alias=AliasChoices('sex at birth', 'birth sex', 'natal sex', 'biological sex')
+        validation_alias=AliasChoices('sex at birth', 'birth sex', 'natal sex', 'biological sex'),
     )
 
     gender: Gender = Field(
@@ -172,37 +115,63 @@ class SubjectBase(BaseModel):
     )
 
     # Measurement logs
-    height_logs: list[HeightLog] = Field(
-        default_factory=list,
+    height_logs: dict[date, float] = Field(
+        default_factory=dict,
         title='Height logs',
-        description='Historical logs of height',
-        validation_alias=AliasChoices('height logs', 'heights')
+        description='Historical logs of height, in format {<log_date>: <height in m>}',
+        validation_alias=AliasChoices('height logs', 'heights'),
     )
 
-    weight_logs: list[WeightLog] = Field(
-        default_factory=list,
-        title='Weight logs',
-        description='Historical logs of weight',
-        validation_alias=AliasChoices('weight logs', 'weights')
-    )
-
-    # Validate unique log dates for all logs
-    @field_validator('height_logs', 'weight_logs')
+    @field_validator('height_logs')
     @classmethod
-    def validate_unique_dates_of_logs(cls, logs: list[MeasurementLog]) -> list[MeasurementLog]:
-        # Sort the original list in-place from min to max based on log_date
-        logs.sort(key=lambda log: log.log_date)
-
-        # Ensure all log dates in a historical logs are unique
-        dates_found = set()
-        for log in logs:
-            if log.log_date in dates_found:
+    def validate_height_logs(cls, logs: dict[date, float]) -> dict[date, float]:
+        lb_date = date(1900, 1, 1)
+        ub_date = date.today()
+        lb_height = 0.50  # in m
+        ub_height = 2.50  # in m
+        logs_output = {}
+        for log_date, height in logs.items():
+            # Check bounds
+            if not (lb_date <= log_date <= ub_date):
+                raise ValueError(f"Log date of {log_date} is out of range of {lb_date} and {ub_date}")
+            if not (lb_height <= height <= ub_height):
                 raise ValueError(
-                    f"Duplicated log entry: historical log found for date {log.log_date.strftime('%Y-%m-%d')}"
+                    f"Height of {height} m at {log_date} is out of range of {lb_height} m and {ub_height} m"
                 )
-            else:
-                dates_found.add(log.log_date)
-        return logs
+            # Round value to two decimals
+            logs_output[log_date] = round(height, 2)
+        # Sort by date
+        logs_output = dict(sorted(logs_output.items()))
+        return logs_output
+
+    weight_logs: dict[date, float] = Field(
+        default_factory=dict,
+        title='Weight logs',
+        description='Historical logs of weight, in format {<log_date>: <weight in kg>}',
+        validation_alias=AliasChoices('weight logs', 'weights'),
+    )
+
+    @field_validator('weight_logs')
+    @classmethod
+    def validate_weight_logs(cls, logs: dict[date, float]) -> dict[date, float]:
+        lb_date = date(1900, 1, 1)
+        ub_date = date.today()
+        lb_weight = 5.0  # in kg
+        ub_weight = 250.0 # in kg
+        logs_output = {}
+        for log_date, weight in logs.items():
+            # Check bounds
+            if not (lb_date <= log_date <= ub_date):
+                raise ValueError(f"Log date of {log_date} is out of range of {lb_date} and {ub_date}")
+            if not (lb_weight <= weight <= ub_weight):
+                raise ValueError(
+                    f"Weight of {weight} kg at {log_date} is out of range of {lb_weight} kg and {ub_weight} kg"
+                )
+            # Round value to one decimal
+            logs_output[log_date] = round(weight, 1)
+        # Sort by date
+        logs_output = dict(sorted(logs_output.items()))
+        return logs_output
 
     # Contact
     phone: PhoneNumber | None = Field(
@@ -267,3 +236,35 @@ class SubjectBase(BaseModel):
     def id_short(self) -> str:
         """Short ID, first eight digits of full ID"""
         return self.id_full[:8]
+
+    @staticmethod
+    def _get_latest_measurement_log(logs: dict[date, float], target_date: date | str) -> dict[date, float]:
+        """Get the latest measurement log to the target date from a log dict"""
+        # Parse target_date to type 'date'
+        target_date = TypeAdapter(date).validate_python(target_date)
+
+        # Iterate backwards through the logs to find the match with log_date <= target_date
+        for log_date, v in reversed(logs.items()):
+            if log_date <= target_date:
+                return {log_date: v}
+        return {}
+
+    def get_latest_height_log(self, target_date: date | str | None = None) -> dict[date, float]:
+        """
+        Get the latest height log to the target date
+        :param target_date: The latest height log earlier than or equal to it, default is today
+        :return: Dict of {<log_date>: <height>}, if no matched, returns empty dict
+        """
+        if target_date is None:
+            target_date = date.today()
+        return self._get_latest_measurement_log(logs=self.height_logs, target_date=target_date)
+
+    def get_latest_weight_log(self, target_date: date | str | None = None) -> dict[date, float]:
+        """
+        Get the latest weight log to the target date
+        :param target_date: The latest weight log earlier than or equal to it, default is today
+        :return: Dict of {<log_date>: <weight>}, if no matched, returns empty dict
+        """
+        if target_date is None:
+            target_date = date.today()
+        return self._get_latest_measurement_log(logs=self.weight_logs, target_date=target_date)

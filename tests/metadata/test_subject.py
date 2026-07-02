@@ -4,7 +4,8 @@ from datetime import date, timedelta
 import pytest
 from pydantic import ValidationError
 
-from ieqstar.metadata.subject import Gender, SubjectBase
+from ieqstar import __version__
+from ieqstar.metadata.subject import Gender, Sex, SubjectBase
 
 
 class TestInstantiation:
@@ -17,15 +18,17 @@ class TestInstantiation:
         assert subject.first_name == "Max"
         assert subject.middle_name == "Maria"
         assert subject.birth_date == date(1992, 5, 20)
+        assert subject.sex == Sex.MALE
         assert subject.gender == Gender.MALE
         assert subject.registration_date == date.today()
-        assert subject.height_logs[0].height == 1.79  # Confirm rounding to 2 decimals
-        assert subject.height_logs[-1].log_date == date(2026, 3, 1)  # Confirm date sorted in ascending sequence
-        assert subject.weight_logs[0].weight == 67.9  # Confirm rounding to 1 decimal
-        assert subject.weight_logs[-1].log_date == date(2026, 3, 1)  # Confirm date sorted in ascending sequence
+        assert list(subject.height_logs.values())[0] == 1.79  # Confirm rounding to 2 decimals
+        assert list(subject.height_logs)[-1] == date(2026, 3, 1)  # Confirm date sorted in ascending sequence
+        assert list(subject.weight_logs.values())[0] == 67.9  # Confirm rounding to 1 decimal
+        assert list(subject.weight_logs)[-1] == date(2026, 3, 1)  # Confirm date sorted in ascending sequence
         assert subject.phone == "tel:+49-176-12345678"
         assert subject.email == "max.mustermann@sub-domain.domain.de"
         assert subject.registration_date == date.today()  # Confirm default date is today
+        assert subject.version == __version__
 
     def test_from_json(self, valid_data_subject):
         """Instantiation of SubjectBase from a JSON string"""
@@ -65,15 +68,36 @@ class TestNameRegexPatterns:
             SubjectBase(**valid_data_subject)
 
 
-def test_unique_dates_validator(valid_data_subject):
-    """Confirm duplicate logging dates fail custom array validations"""
-    valid_data_subject['height_logs'] = [
-        {'log_date': '2026-03-01' , 'height': 1.75},
-        {'log_date': '2026-03-01' , 'height': 1.85},  # Duplicate log_date
-    ]
-    with pytest.raises(ValidationError) as e:
-        SubjectBase(**valid_data_subject)
-    assert "Duplicated log entry" in str(e.value)
+class TestMeasurementLogs:
+    """Verify measurement log behavior"""
+    def test_height_logs(self, valid_data_subject):
+        """Verify height logs"""
+        valid_data_subject['height_logs'].update({'2026-04-01': 175})  # Assumed input of height in cm
+        with pytest.raises(ValidationError) as e:
+            SubjectBase(**valid_data_subject)
+        assert "out of range" in str(e.value)
+
+    def test_weight_logs(self, valid_data_subject):
+        """Verify weight logs"""
+        tomorrow = date.today() + timedelta(days=1)
+        valid_data_subject['weight_logs'].update({tomorrow.strftime("%Y-%m-%d"): 67.0})  # Date in the future
+        with pytest.raises(ValidationError) as e:
+            SubjectBase(**valid_data_subject)
+        assert "out of range" in str(e.value)
+
+    def test_get_latest_height_log(self, valid_data_subject):
+        """Verify get latest height log"""
+        subject = SubjectBase(**valid_data_subject)
+        assert subject.get_latest_height_log() == {date(2026, 3, 1): 1.78}
+        assert subject.get_latest_height_log(target_date='2026-02-15') == {date(2026, 2, 1): 1.79}
+        assert subject.get_latest_height_log(target_date='2025-12-31') == {}
+
+    def test_get_latest_weight_log(self, valid_data_subject):
+        """Verify get latest weight log"""
+        subject = SubjectBase(**valid_data_subject)
+        assert subject.get_latest_weight_log() == {date(2026, 3, 1): 68.0}
+        assert subject.get_latest_weight_log(target_date=date(2026, 2, 15)) == {date(2026, 2, 1): 67.8}
+        assert subject.get_latest_weight_log(target_date=date(2025, 12, 31)) == {}
 
 
 def test_future_dates_blocked(valid_data_subject):
