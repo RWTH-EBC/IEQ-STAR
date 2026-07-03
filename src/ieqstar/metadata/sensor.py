@@ -229,3 +229,12 @@ class SensorBase(SensorABC):
 
         raise ValueError(
             f"Measured value {measured_value} {self.unit} does not match any accuracy ranges for this sensor")
+
+
+class MultiSensorBase(SensorABC):
+    sensors: dict[str, SensorBase] = Field(
+        default_factory=dict,
+        title='Sensors',
+        description='Sensors in multi-sensor product, in format {<sensor_id>: SensorBase}',
+        min_length=1,
+    )

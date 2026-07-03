@@ -4,20 +4,20 @@ import pytest
 from pydantic import ValidationError
 
 from ieqstar import __version__
-from ieqstar.metadata.sensor import SensorAccuracyByRange, SensorBase
+from ieqstar.metadata.sensor import MultiSensorBase, SensorAccuracyByRange, SensorBase
 
 
-class TestInstantiation:
+class TestSensorInstantiation:
     """Verify instantiation of SensorBase"""
     def test_from_dict(self, valid_data_sensor_co2):
         """Instantiation of SensorBase from a dictionary"""
         sensor = SensorBase(**valid_data_sensor_co2)
         assert sensor.ieq_star_version == __version__
-        assert sensor.manufacturer == 'Test Mfr'
-        assert sensor.model_name == 'Test Sen CO2'
-        assert sensor.serial_number == 'S/N 1234 5678'
-        assert sensor.measurand == 'CO2 concentration'
-        assert sensor.unit == 'ppm'
+        assert sensor.manufacturer == "Test Mfr"
+        assert sensor.model_name == "Test Sen CO2"
+        assert sensor.serial_number == "S/N 1234 5678"
+        assert sensor.measurand == "CO2 concentration"
+        assert sensor.unit == "ppm"
         assert sensor.range == (0, 10000)
         assert sensor.resolution == 1.0
         assert list(sensor.accuracies)[0] == (0, 5000)
@@ -32,7 +32,7 @@ class TestInstantiation:
         assert sensor_from_dict == sensor_from_json
 
 
-class TestRangeValidation:
+class TestSensorRangeValidation:
     """Verify range validation"""
     def test_range_validation(self, valid_data_sensor_co2):
         """Verify invalid sensor range"""
@@ -63,7 +63,7 @@ class TestRangeValidation:
         assert "Discontinuous definition of accuracy" in str(e.value)
 
 
-class TestErrorCalculation:
+class TestSensorErrorCalculation:
     """Verify error calculation"""
     @pytest.mark.parametrize(
         "measured_value, expected_error",
@@ -99,3 +99,24 @@ class TestErrorCalculation:
         sensor = SensorBase(**valid_data_sensor_co2)
         assert list(sensor.accuracies)[0] == (0, 5000)
         assert list(sensor.accuracies)[1] == (5001, 10000)
+
+
+class TestMultiSensorInstantiation:
+    """Verify instantiation of MultiSensorBase"""
+    def test_from_dict(self, valid_data_multi_sensor):
+        """Instantiation of MultiSensorBase from dictionary"""
+        multi_sensor = MultiSensorBase(**valid_data_multi_sensor)
+        assert multi_sensor.ieq_star_version == __version__
+        assert multi_sensor.manufacturer == "Test Mfr MS"
+        assert multi_sensor.model_name == "Test Multi"
+        assert multi_sensor.serial_number == "S/N MT 123"
+        assert len(multi_sensor.sensors) == 2
+        assert multi_sensor.sensors['Temp_1'].manufacturer == "Test Mfr"
+        assert multi_sensor.sensors['Temp_2'].manufacturer == "Test Mfr MS"
+
+    def test_from_json(self, valid_data_multi_sensor):
+        """Instantiation of MultiSensorBase from a JSON string"""
+        multi_sensor_from_dict = MultiSensorBase(**valid_data_multi_sensor)
+        json_string = multi_sensor_from_dict.model_dump_json(indent=2)
+        multi_sensor_from_json = MultiSensorBase.model_validate_json(json_string)
+        assert multi_sensor_from_dict == multi_sensor_from_json

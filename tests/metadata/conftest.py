@@ -77,6 +77,37 @@ def valid_data_sensor_temperature() -> dict:
     }
 
 @pytest.fixture
+def valid_data_multi_sensor(valid_data_sensor_temperature) -> dict:
+    """Valid data of a multi-sensor"""
+    return {
+        'manufacturer': 'Test Mfr MS',
+        'model_name': 'Test Multi',
+        'serial_number': 'S/N MT 123',
+        'sensors': {
+            'Temp_1': {
+                **valid_data_sensor_temperature,
+            },
+            'Temp_2': {
+                'manufacturer': 'Test Mfr MS',
+                'measurand': 'Temperature',
+                'unit': 'degC',
+                'range': (-60, 200),
+                'resolution': 0.1,
+                'accuracies': {
+                    (-60, 200): {
+                        'absolute_error': 0.15,
+                        'relative_error': 0.002,
+                        'error_combination': 'add',
+                    },
+                },
+                'sensing_technology': 'Pt1000',
+                'note': 'Class A according to IEC 60751',
+                'calibration_date': '2026-03-01',
+            },
+        },
+    }
+
+@pytest.fixture
 def valid_data_field() -> dict:
     """Valid data of a field"""
     return {
