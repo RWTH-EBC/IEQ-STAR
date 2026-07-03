@@ -1,4 +1,3 @@
-import json
 from datetime import date, timedelta
 
 import pytest
@@ -13,6 +12,7 @@ class TestInstantiation:
     def test_from_dict(self, valid_data_subject):
         """Instantiation of SubjectBase from a dictionary"""
         subject = SubjectBase(**valid_data_subject)
+        assert subject.ieq_star_version == __version__
         assert subject.last_name_at_birth == "Mustermann"
         assert subject.last_name == "Mustermann"  # Confirm default value set as last_name_of_birth
         assert subject.first_name == "Max"
@@ -28,12 +28,11 @@ class TestInstantiation:
         assert subject.phone == "tel:+49-176-12345678"
         assert subject.email == "max.mustermann@sub-domain.domain.de"
         assert subject.registration_date == date.today()  # Confirm default date is today
-        assert subject.version == __version__
 
     def test_from_json(self, valid_data_subject):
         """Instantiation of SubjectBase from a JSON string"""
         subject_from_dict = SubjectBase(**valid_data_subject)
-        json_string = json.dumps(valid_data_subject)
+        json_string = subject_from_dict.model_dump_json(indent=2)
         subject_from_json = SubjectBase.model_validate_json(json_string)
         assert subject_from_json == subject_from_dict
 

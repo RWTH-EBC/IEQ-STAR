@@ -4,16 +4,16 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ieqstar import __version__
 
+GLOBAL_MODEL_CONFIG = ConfigDict(
+    validate_assignment=True,
+    validate_by_name=True,
+)
 
-class MetadataBase(BaseModel, ABC):
-    # Pydantic configuration
-    model_config = ConfigDict(
-        validate_assignment=True,
-        validate_by_name=True,
-    )
+class MetadataABC(BaseModel, ABC):
+    model_config = GLOBAL_MODEL_CONFIG
 
-    version: str = Field(
+    ieq_star_version: str = Field(
         default=__version__,
-        title="Version",
+        title="IEQ-STAR version",
         description="Current version of IEQ-STAR",
     )

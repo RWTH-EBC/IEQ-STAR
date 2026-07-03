@@ -1,7 +1,10 @@
+from abc import ABC
 from datetime import date
 from enum import Enum
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, Field, field_serializer, field_validator, model_validator
+
+from . import base
 
 
 class SensorAccuracyErrorCombination(str, Enum):
@@ -13,24 +16,7 @@ class SensorAccuracyErrorCombination(str, Enum):
 class SensorAccuracyByRange(BaseModel):
     """Sensor accuracy by a specific range"""
     # Pydantic configuration
-    model_config = ConfigDict(
-        validate_assignment=True,
-        validate_by_name=True,
-    )
-
-    range: tuple[float, float] = Field(
-        title='Range',
-        description='Measurement range for the accuracy (required field), in (min, max)',
-    )
-
-    # Validate range
-    @field_validator('range')
-    @classmethod
-    def validate_range(cls, rg: tuple[float, float]) -> tuple[float, float]:
-        """Ensure minimum is less than maximum range"""
-        if not rg[0] < rg[1]:
-            raise ValueError(f"Minimum range value {rg[0]} must be strictly less than maximum range value {rg[1]}")
-        return rg
+    model_config = base.GLOBAL_MODEL_CONFIG
 
     absolute_error: float = Field(
         default=0.0,
@@ -59,20 +45,13 @@ class SensorAccuracyByRange(BaseModel):
     def calculate_error(self, measured_value: float) -> float:
         if self.error_combination == SensorAccuracyErrorCombination.ADD:
             return self.absolute_error + self.relative_error * abs(measured_value)
-        elif self.error_combination == SensorAccuracyErrorCombination.MAX:
+        if self.error_combination == SensorAccuracyErrorCombination.MAX:
             return max(self.absolute_error, self.relative_error * abs(measured_value))
-        else:
-            raise ValueError(f"Error combination {self.error_combination} not implemented")
+        raise ValueError(f"Error combination {self.error_combination} not implemented")
 
 
-class SensorBase(BaseModel):
-    """Sensor or transducer"""
-    # Pydantic configuration
-    model_config = ConfigDict(
-        validate_assignment=True,
-        validate_by_name=True,
-    )
-
+class SensorABC(base.MetadataABC, ABC):
+    """ABC for SensorBase and MultiSensorBase"""
     # Manufacture
     manufacturer: str = Field(
         title='Manufacturer',
@@ -86,9 +65,10 @@ class SensorBase(BaseModel):
         default=None,
         title='Model',
         description='Model type, which describes the general characteristics and technical specifications shared by an '
-                    'entire batch or line of instruments',
-        validation_alias=AliasChoices('model', 'type', 'type code', 'module', 'module type', 'part number', 'P/N',
-                                      'PN'),
+                    'entire batch or line of products',
+        validation_alias=AliasChoices(
+            'model name', 'model', 'type', 'type code', 'module', 'module type', 'part number', 'P/N', 'PN'
+        ),
         min_length=1,
         max_length=50,
     )
@@ -96,18 +76,22 @@ class SensorBase(BaseModel):
     serial_number: str | None = Field(
         default=None,
         title='Serial number',
-        description='Serial number, which is a completely unique identifier assigned to one specific instrument',
+        description='Serial number, which is a completely unique identifier assigned to one specific product',
         validation_alias=AliasChoices('serial number', 'S/N', 'SN'),
         min_length=1,
         max_length=50,
     )
 
+
+class SensorBase(SensorABC):
+    """Single sensor or transducer"""
+    # Measurement
     measurand: str = Field(
         title='Measurand',
         description='Measurand (required field), defined as the physical quantity that the sensor intends to measure',
         # Ref: https://www.sciencedirect.com/topics/engineering/measurand
         validation_alias=AliasChoices('parameter', 'variable', 'value'),
-        min_length=2,
+        min_length=1,
         max_length=50,
     )
 
@@ -129,7 +113,9 @@ class SensorBase(BaseModel):
     def validate_range(cls, rg: tuple[float, float]) -> tuple[float, float]:
         """Ensure minimum is less than maximum range"""
         if not rg[0] < rg[1]:
-            raise ValueError(f"Minimum range value {rg[0]} must be strictly less than maximum range value {rg[1]}")
+            raise ValueError(
+                f"Minimum range value {rg[0]} of sensor must be strictly less than maximum range value {rg[1]}"
+            )
         return rg
 
     resolution: float = Field(
@@ -138,40 +124,78 @@ class SensorBase(BaseModel):
         gt=0,
     )
 
-    accuracies: list[SensorAccuracyByRange] = Field(
-        default_factory=list,
+    accuracies: dict[tuple[float, float], SensorAccuracyByRange] = Field(
+        default_factory=dict,
         title='Accuracies',
-        description='Measurement accuracies by various ranges (required field)',
+        description='Measurement accuracies by various ranges (required field), in format '
+                    '{<(range_min, range_max)>: <SensorAccuracyByRange>}',
         min_length=1,
     )
 
+    @field_validator('accuracies', mode='before')
+    @classmethod
+    def accuracies_key_from_str(
+            cls,
+            accs: dict[str, SensorAccuracyByRange] | dict[tuple[float, float], SensorAccuracyByRange]
+    ) -> dict[tuple[float, float], SensorAccuracyByRange]:
+        accs_output = {}
+        for k, v in accs.items():
+            if isinstance(k, tuple):
+                accs_output[k] = v
+            elif isinstance(k, str):
+                rg_min_str, rg_max_str = k.strip().replace('(', '').replace(')', '').split(',')
+                accs_output[(float(rg_min_str.strip()), float(rg_max_str.strip()))] = v
+            else:
+                raise ValueError(
+                    f"Invalid accuracy key {k}, it must be tuple or string of tuple in format tuple[float, float]"
+                )
+        return accs_output
+
+    @field_serializer('accuracies', mode='plain')
+    def accuracies_key_to_str(
+            self, accs: dict[tuple[float, float], SensorAccuracyByRange]
+    ) -> dict[str, SensorAccuracyByRange]:
+        return {str(k): v for k, v in accs.items()}
+
+    @field_validator('accuracies')
+    @classmethod
+    def validate_accuracies_range(
+            cls, accs: dict[tuple[float, float], SensorAccuracyByRange]
+    ) -> dict[tuple[float, float], SensorAccuracyByRange]:
+        # Ensure range_min is less than range_max
+        for rg in accs:
+            if not rg[0] < rg[1]:
+                raise ValueError(
+                    f"Minimum range value {rg[0]} of accuracies must be strictly less than maximum range value {rg[1]}"
+                )
+        # Sort the original keys from min to max based on range_min
+        return dict(sorted(accs.items(), key=lambda item: item[0][0]))
+
     @model_validator(mode='after')
     def validate_accuracies(self) -> 'SensorBase':
-        # Sort the original list in-place from min to max
-        self.accuracies.sort(key=lambda acc: acc.range[0])
+        # Convert keys of accuracies to list
+        accs = list(self.accuracies)
 
         # Check if accuracy profiles do not cover the entire measurement range
-        if self.accuracies[0].range[0] != self.range[0]:
+        if accs[0][0] != self.range[0]:
             raise ValueError(
-                f"Inconsistent minimal measurement range between class Sensor {self.range[0]} and class "
-                f"SensorAccuracyByRange {self.accuracies[0].range[0]}"
+                f"Inconsistent minimal measurement range between class SensorBase {self.range[0]} and class "
+                f"SensorAccuracyByRange {accs[0][0]}"
             )
-        if self.accuracies[-1].range[1] != self.range[1]:
+        if accs[-1][1] != self.range[1]:
             raise ValueError(
-                f"Inconsistent maximal measurement range between class Sensor {self.range[1]} and class "
-                f"SensorAccuracyByRange {self.accuracies[-1].range[1]}"
+                f"Inconsistent maximal measurement range between class SensorBase {self.range[1]} and class "
+                f"SensorAccuracyByRange {accs[-1][1]}"
             )
 
         # Check if accuracy profiles are continuously on the measurement range
-        for i in range(len(self.accuracies)):
-            if i > 0 and self.accuracies[i - 1].range[1] + self.resolution != self.accuracies[i].range[0]:
+        for i in range(len(accs)):
+            if i > 0 and accs[i - 1][1] + self.resolution != accs[i][0]:
                 raise ValueError(
-                    f"Discontinuous definition of accuracy between ranges ({self.accuracies[i - 1].range[0]}, "
-                    f"{self.accuracies[i - 1].range[1]}) and ({self.accuracies[i].range[0]}, "
-                    f"{self.accuracies[i].range[1]}), the difference between {self.accuracies[i - 1].range[1]} in "
-                    f"({self.accuracies[i - 1].range[0]}, {self.accuracies[i - 1].range[1]}) and "
-                    f"{self.accuracies[i].range[0]} in ({self.accuracies[i].range[0]}, "
-                    f"{self.accuracies[i].range[1]}) must be the resolution of {self.resolution}"
+                    f"Discontinuous definition of accuracy between ranges ({accs[i - 1][0]}, {accs[i - 1][1]}) and "
+                    f"({accs[i][0]}, {accs[i][1]}), the difference between {accs[i - 1][1]} in ({accs[i - 1][0]}, "
+                    f"{accs[i - 1][1]}) and {accs[i][0]} in ({accs[i][0]}, {accs[i][1]}) must be the resolution of "
+                    f"{self.resolution}"
                 )
         return self
 
@@ -199,9 +223,9 @@ class SensorBase(BaseModel):
 
     def calculate_error(self, measured_value: float) -> float:
         """Calculate measurement error"""
-        for acc in self.accuracies:
-            if acc.range[0] <= measured_value <= acc.range[1]:
-                return acc.calculate_error(measured_value)
+        for acc, val in self.accuracies.items():
+            if acc[0] <= measured_value <= acc[1]:
+                return val.calculate_error(measured_value)
 
         raise ValueError(
             f"Measured value {measured_value} {self.unit} does not match any accuracy ranges for this sensor")

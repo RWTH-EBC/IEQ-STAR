@@ -32,24 +32,22 @@ def valid_data_sensor_co2() -> dict:
         'manufacturer': 'Test Mfr',
         'model_name': 'Test Sen CO2',
         'serial_number': 'S/N 1234 5678',
-        'measurand': 'CO2',
+        'measurand': 'CO2 concentration',
         'unit': 'ppm',
         'range': (0, 10_000),
         'resolution': 1,
-        'accuracies': [
-            {
-                'range': (0, 5_000),
+        'accuracies': {
+            (0, 5_000): {
                 'absolute_error': 50,
                 'relative_error': 0.03,
                 'error_combination': 'add',
             },
-            {
-                'range': (5_001, 10_000),
+            (5_001, 10_000): {
                 'absolute_error': 100,
                 'relative_error': 0.05,
                 'error_combination': 'add',
             },
-        ],
+        },
         'sensing_technology': 'NDIR',
         'note': 'Operating tempearture -5 °C to +50 °C',
         'calibration_date': '2026-01-01',
@@ -66,14 +64,13 @@ def valid_data_sensor_temperature() -> dict:
         'unit': 'degC',
         'range': (-50, 400),
         'resolution': 0.1,
-        'accuracies': [
-            {
-                'range': (-50, 400),
+        'accuracies': {
+            (-50, 400): {
                 'absolute_error': 0.3,
                 'relative_error': 0.005,
                 'error_combination': 'add',
-            }
-        ],
+            },
+        },
         'sensing_technology': 'Pt100',
         'note': 'Class B according to IEC 60751',
         'calibration_date': '2026-02-01',

@@ -38,7 +38,7 @@ class Gender(str, Enum):
     NOT_STATED = 'not-stated'  # Asked but declined to provide a response
 
 
-class SubjectBase(base.MetadataBase):
+class SubjectBase(base.MetadataABC):
     # Names
     last_name_at_birth: str = Field(
         frozen=True,
