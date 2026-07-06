@@ -29,7 +29,7 @@ class TestSensorInstantiation:
         sensor_from_dict = SensorBase(**valid_data_sensor_co2)
         json_string = sensor_from_dict.model_dump_json(indent=2)
         sensor_from_json = SensorBase.model_validate_json(json_string)
-        assert sensor_from_dict == sensor_from_json
+        assert sensor_from_json == sensor_from_dict
 
 
 class TestSensorRangeValidation:
@@ -119,4 +119,4 @@ class TestMultiSensorInstantiation:
         multi_sensor_from_dict = MultiSensorBase(**valid_data_multi_sensor)
         json_string = multi_sensor_from_dict.model_dump_json(indent=2)
         multi_sensor_from_json = MultiSensorBase.model_validate_json(json_string)
-        assert multi_sensor_from_dict == multi_sensor_from_json
+        assert multi_sensor_from_json == multi_sensor_from_dict

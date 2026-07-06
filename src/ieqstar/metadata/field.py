@@ -1,13 +1,9 @@
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, computed_field
+from pydantic import AliasChoices, Field, computed_field
+
+from . import base
 
 
-class FieldBase(BaseModel):
-    # Pydantic configuration
-    model_config = ConfigDict(
-        validate_assignment=True,
-        validate_by_name=True,
-    )
-
+class FieldBase(base.MetadataABC):
     length: float = Field(
         title='Length',
         description='Field length (required field)',
