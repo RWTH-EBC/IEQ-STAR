@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
 
-from . import field, sensor, subject
+from . import base, field, sensor, subject
 
 
 class SubjectSensorPosition(str, Enum):
@@ -40,144 +40,93 @@ class SubjectSensorPosition(str, Enum):
     FOOT_BOTTOM_RIGHT = 'foot_bottom_right'
 
 
-class SubjectSensor(sensor.SensorBase):
-    id_setup: str = Field(
-        title='ID setup',
-        description='ID to distinguish sensors on subject in field for subject test setup (required field)',
-        validation_alias=AliasChoices('ID setup', 'ID'),
-        min_length=1,
-    )
+class SubjectSensor(BaseModel):
+    # Pydantic configuration
+    model_config = base.GLOBAL_MODEL_CONFIG
 
     position: SubjectSensorPosition = Field(
         title='Position',
-        description='Sensor position installed on subject in field (required field)',
+        description='Sensor position installed on subject (required field)',
         validation_alias=AliasChoices('pos'),
     )
 
-    @classmethod
-    def from_sensor_base(
-            cls,
-            sensor_base: sensor.SensorBase,
-            id_setup: str,
-            position: SubjectSensorPosition
-    ):
-        """Create SubjectSensor from SensorBase"""
-        return cls(
-            **sensor_base.model_dump(),
-            id_setup=id_setup,
-            position=position,
-        )
-
-
-class FieldSubject(subject.SubjectBase):
-    id_setup: str = Field(
-        title='ID setup',
-        description='ID to distinguish subjects in field for subject test setup (required field)',
-        validation_alias=AliasChoices('ID setup', 'ID'),
-        min_length=1,
+    sensor_info: sensor.SingleSensorBase | sensor.MultiSensorBase = Field(
+        title='Sensor info',
+        description='Sensor information, as predefined in the SingleSensorBase or MultiSensorBase (required field)',
+        discriminator='sensor_type',
     )
+
+
+class FieldSubject(BaseModel):
+    # Pydantic configuration
+    model_config = base.GLOBAL_MODEL_CONFIG
 
     position: str = Field(
         title='Position',
-        description='Subject position in field',
+        description='Subject position in field (required field)',
         validation_alias=AliasChoices('pos'),
     )
 
-    subject_sensors: list[SubjectSensor] = Field(
-        default_factory=list,
+    subject_info: subject.SubjectBase = Field(
+        title='Subject info',
+        description='Subject information, as predefined in SubjectBase (required field)',
+        validation_alias=AliasChoices('subject info'),
+    )
+
+    subject_sensors: dict[str, SubjectSensor] = Field(
+        default_factory=dict,
         title='Subject sensors',
-        description='Sensors installed on subject in field',
+        description='Sensors installed on subject, in format {<id_subject_sensor>: SubjectSensor}',
         validation_alias=AliasChoices('subject sensors', 'sensors'),
     )
 
-    @classmethod
-    def from_subject_base(
-            cls,
-            subject_base: subject.SubjectBase,
-            id_setup: str,
-            position: str,
-            subject_sensors: list[SubjectSensor] | None = None,
-    ):
-        """Create FieldSubject from SubjectBase"""
-        return cls(
-            **subject_base.model_dump(),
-            id_setup=id_setup,
-            position=position,
-            subject_sensors=subject_sensors or [],
-        )
 
-
-class FieldSensor(sensor.SensorBase):
-    id_setup: str = Field(
-        title='ID setup',
-        description='ID to distinguish sensors in field for subject test setup (required field)',
-        validation_alias=AliasChoices('ID setup', 'ID'),
-        min_length=1,
-    )
+class FieldSensor(BaseModel):
+    # Pydantic configuration
+    model_config = base.GLOBAL_MODEL_CONFIG
 
     position: str = Field(
         title='Position',
-        description='Sensor position in field',
+        description='Sensor position installed in field (required field)',
         validation_alias=AliasChoices('pos'),
     )
 
-    @classmethod
-    def from_sensor_base(
-            cls,
-            sensor_base: sensor.SensorBase,
-            id_setup: str,
-            position: str
-    ):
-        """Create FieldSensor from SensorBase"""
-        return cls(
-            **sensor_base.model_dump(),
-            id_setup=id_setup,
-            position=position,
-        )
-
-
-class SetupField(field.FieldBase):
-    id_setup: str = Field(
-        title='ID setup',
-        description='ID to distinguish fields for subject test setup (required field)',
+    sensor_info: sensor.SingleSensorBase | sensor.MultiSensorBase = Field(
+        title='Sensor info',
+        description='Sensor information, as predefined in SingleSensorBase or MultiSensorBase (required field)',
+        discriminator='sensor_type',
     )
 
-    field_subjects: list[FieldSubject] = Field(
-        default_factory=list,
+
+class SetupField(BaseModel):
+    # Pydantic configuration
+    model_config = base.GLOBAL_MODEL_CONFIG
+
+    field_info: field.FieldBase = Field(
+        title='Field info',
+        description='Field information, as predefined in FieldBase (required field)',
+        validation_alias=AliasChoices('field info')
+    )
+
+    field_subjects: dict[str, FieldSubject] = Field(
+        default_factory=dict,
         title='Field subjects',
-        description='Subjects in field',
+        description='Subjects in field, in format {<id_field_subject>: FieldSubject}',
         validation_alias=AliasChoices('field subjects', 'subjects'),
     )
 
-    field_sensors: list[FieldSensor] = Field(
-        default_factory=list,
+    field_sensors: dict[str, FieldSensor] = Field(
+        default_factory=dict,
         title='Field sensors',
-        description='Sensors in field',
+        description='Sensors in field, in format {<id_field_sensor>: FieldSensor}',
         validation_alias=AliasChoices('field sensors', 'sensors')
     )
 
-    @classmethod
-    def from_field_base(
-            cls,
-            field_base: field.FieldBase,
-            id_setup: str,
-            field_subjects: list[FieldSubject] | None = None,
-            field_sensors: list[FieldSensor] | None = None,
-    ):
-        """Create SetupField from FieldBase"""
-        return cls(
-            **field_base.model_dump(),
-            id_setup=id_setup,
-            field_subjects=field_subjects or [],
-            field_sensors=field_sensors or [],
-        )
 
-
-class SetupBase(BaseModel):
+class SetupBase(base.MetadataABC):
     # Pydantic configuration
     model_config = ConfigDict(
-        validate_assignment=True,
-        validate_by_name=True,
+        **base.MetadataABC.model_config,
         arbitrary_types_allowed=True,
     )
 
@@ -229,15 +178,15 @@ class SetupBase(BaseModel):
 
     @model_validator(mode='after')
     def validate_start_end_time(self) -> 'SetupBase':
-        if self.start_time >= self.end_time:
+        if not self.start_time < self.end_time:
             raise ValueError(f"Start time of setup {self.start_time} must be earlier than end time {self.end_time}")
         return self
 
     # Setup fields
-    setup_fields: list[SetupField] = Field(
-        default_factory=list,
+    setup_fields: dict[str, SetupField] = Field(
+        default_factory=dict,
         title='Setup fields',
-        description='Subject test setup fields, which consist of field subjects and field sensors',
+        description='Subject test setup fields, in format {<id_setup_field>: SetupField}',
         validation_alias=AliasChoices('setup fields', 'fields'),
         min_length=1,
     )

@@ -1,6 +1,7 @@
 from abc import ABC
 from datetime import date
 from enum import Enum
+from typing import Literal
 
 from pydantic import AliasChoices, BaseModel, Field, field_serializer, field_validator, model_validator
 
@@ -52,6 +53,9 @@ class SensorAccuracyByRange(BaseModel):
 
 class SensorABC(base.MetadataABC, ABC):
     """ABC for SensorBase and MultiSensorBase"""
+    # Discriminator
+    sensor_type: str
+
     # Manufacture
     manufacturer: str = Field(
         title='Manufacturer',
@@ -83,8 +87,11 @@ class SensorABC(base.MetadataABC, ABC):
     )
 
 
-class SensorBase(SensorABC):
+class SingleSensorBase(SensorABC):
     """Single sensor or transducer"""
+    # Discriminator
+    sensor_type: Literal['single'] = 'single'
+
     # Measurement
     measurand: str = Field(
         title='Measurand',
@@ -172,7 +179,7 @@ class SensorBase(SensorABC):
         return dict(sorted(accs.items(), key=lambda item: item[0][0]))
 
     @model_validator(mode='after')
-    def validate_accuracies(self) -> 'SensorBase':
+    def validate_accuracies(self) -> 'SingleSensorBase':
         # Convert keys of accuracies to list
         accs = list(self.accuracies)
 
@@ -232,7 +239,11 @@ class SensorBase(SensorABC):
 
 
 class MultiSensorBase(SensorABC):
-    sensors: dict[str, SensorBase] = Field(
+    # Discriminator
+    sensor_type: Literal['multi'] = 'multi'
+
+    # Sensors
+    sensors: dict[str, SingleSensorBase] = Field(
         default_factory=dict,
         title='Sensors',
         description='Sensors in multi-sensor product, in format {<sensor_id>: SensorBase}',
