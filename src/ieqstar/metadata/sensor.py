@@ -246,6 +246,6 @@ class MultiSensorBase(SensorABC):
     sensors: dict[str, SingleSensorBase] = Field(
         default_factory=dict,
         title='Sensors',
-        description='Sensors in multi-sensor product, in format {<sensor_id>: SensorBase}',
+        description='Sensors in multi-sensor product, in format {<sensor_id>: SingleSensorBase}',
         min_length=1,
     )

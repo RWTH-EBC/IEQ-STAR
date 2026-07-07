@@ -1,0 +1,168 @@
+@startuml
+!pragma layout smetana
+
+
+package base{
+    abstract class MetadataABC {
+        + model_config: ConfigDict
+        + ieq_star_version: str
+    }
+}
+
+
+package field{
+    class FieldBase implements base.MetadataABC{
+        + length: float
+        + width: float
+        + height: float
+        + <<computed_field>> area: float
+        + <<computed_field>> volume: float
+    }
+}
+
+
+package subject{
+    enum Sex{
+    }
+    enum Gender{
+    }
+    class SubjectBase implements base.MetadataABC{
+        + last_name_at_birth: str
+        + last_name: str | None
+        + <<model_validator>> set_default_last_name(): SubjectBase
+        + first_name: str
+        + middle_name: str | None
+        + birth_date: date
+        + sex: Sex | None
+        + gender: Gender
+        + height_logs: dict[date, float]
+        + <<field_validator>> validate_height_logs(logs: dict[date, float]): dict[date, float]
+        + weight_logs: dict[date, float]
+        + <<field_validator>> validate_weight_logs(logs: dict[date, float]): dict[date, float]
+        + phone: PhoneNumber | None
+        + email: EmailStr | None
+        + registration_date: date
+        + <<computed_field>> pii : str
+        + <<computed_field>> id_full : str
+        + <<computed_field>> id_short : str
+        # {static} _get_latest_measurement_log(logs: dict[date, float], target_date: date | str): dict[date, float]
+        + get_latest_height_log(target_date: date | str | None): dict[date, float]
+        + get_latest_weight_log(target_date: date | str | None): dict[date, float]
+    }
+
+    SubjectBase --> Sex
+    SubjectBase --> Gender
+}
+note left of subject.SubjectBase::height_logs
+    {<date>: <height>}
+end note
+note left of subject.SubjectBase::weight_logs
+    {<date>: <weight>}
+end note
+
+
+package sensor{
+    enum SensorAccuracyErrorCombination{
+    }
+    class SensorAccuracyByRange{
+        + absolute_error: float
+        + relative_error: float
+        + error_combination: SensorAccuracyErrorCombination
+        + calculate_error(measured_value: float): float
+    }
+    abstract class SensorABC implements base.MetadataABC{
+        + sensor_type: str
+        + manufacturer: str
+        + model_name: str | None
+        + serial_number: str | None
+    }
+    class SingleSensorBase implements SensorABC{
+        + measurand: str
+        + unit: str
+        + range: tuple[float, float]
+        + <<field_validator>> validate_range(rg: tuple[float, float]): tuple[float, float]
+        + resolution: float
+        + accuracies: dict[tuple[float, float], SensorAccuracyByRange]
+        + <<field_validator>> accuracies_key_from_str(accs: dict[str, SensorAccuracyByRange] | dict[tuple[float, float], SensorAccuracyByRange]): \n\tdict[tuple[float, float], SensorAccuracyByRange]
+        + <<field_serializer>> accuracies_key_to_str(accs: dict[tuple[float, float], SensorAccuracyByRange]): dict[str, SensorAccuracyByRange]
+        + <<field_validator>> validate_accuracies_range(accs: dict[tuple[float, float], SensorAccuracyByRange]): \n\tdict[tuple[float, float], SensorAccuracyByRange]
+        + <<model_validator>> validate_accuracies(): SingleSensorBase
+        + sensing_technology: str | None
+        + note: str | None
+        + calibration_date: date | None
+        + calculate_error(measured_value: float): float
+    }
+    class MultiSensorBase implements SensorABC{
+        + sensors: dict[str, SingleSensorBase]
+    }
+
+    SensorAccuracyByRange --> SensorAccuracyErrorCombination
+    SingleSensorBase "1" *-- "1..*" SensorAccuracyByRange
+    MultiSensorBase "1" o-- "1..*" SingleSensorBase
+}
+note left of sensor.SingleSensorBase::accuracies
+    {(<range_min>, <range_max>): <sensor_accuracy_by_range>}
+end note
+note left of sensor.MultiSensorBase::sensors
+    {<sensor_id>: <single_sensor_base>}
+end note
+
+
+package setup{
+    enum SubjectSensorPosition{
+    }
+    class SubjectSensor{
+        + position: SubjectSensorPosition
+        + sensor_info: sensor.SingleSensorBase | sensor.MultiSensorBase
+    }
+    class FieldSubject{
+        + position: str
+        + subject_info: subject.SubjectBase
+        + subject_sensors: dict[str, SubjectSensor]
+    }
+    class FieldSensor{
+        + position: str
+        + sensor_info: sensor.SingleSensorBase | sensor.MultiSensorBase
+    }
+    class SetupField{
+        + field_info: field.FieldBase
+        + field_subjects: dict[str, FieldSubject]
+        + field_sensors: dict[str, FieldSensor]
+    }
+    class SetupBase implements base.MetadataABC{
+        + id_setup: str
+        + timezone: tzinfo
+        + <<field_validator>> timezone_from_str(tz: str | tzinfo): tzinfo
+        + <<field_serializer>> timezone_to_str(tz: tzinfo): str
+        + start_time: datetime
+        + end_time: datetime
+        + <<model_validator>> validate_start_end_time(): SetupBase
+        + setup_fields: dict[str, SetupField]
+    }
+
+    SubjectSensor --> SubjectSensorPosition
+    SubjectSensor "1" o-- "0..1" sensor.SingleSensorBase
+    SubjectSensor "1" o-- "0..1" sensor.MultiSensorBase
+    FieldSubject "1" o-- "1" subject.SubjectBase
+    FieldSubject "1" *-- "0..*" SubjectSensor
+    FieldSensor "1" o-- "0..1" sensor.SingleSensorBase
+    FieldSensor "1" o-- "0..1" sensor.MultiSensorBase
+    SetupField "1" o-- "1" field.FieldBase
+    SetupField "1" *-- "0..*" FieldSubject
+    SetupField "1" *-- "0..*" FieldSensor
+    SetupBase "1" *-- "1..*" SetupField
+}
+note left of setup.FieldSubject::subject_sensors
+    {<subject_sensor_id>: <subject_sensor>}
+end note
+note left of setup.SetupField::field_subjects
+    {<field_subject_id>: <field_subject>}
+end note
+note left of setup.SetupField::field_sensors
+    {<field_sensor_id>: <field_sensor>}
+end note
+note left of setup.SetupBase::setup_fields
+    {<setup_field_id>: <setup_field>}
+end note
+
+@enduml

@@ -76,7 +76,7 @@ class FieldSubject(BaseModel):
     subject_sensors: dict[str, SubjectSensor] = Field(
         default_factory=dict,
         title='Subject sensors',
-        description='Sensors installed on subject, in format {<id_subject_sensor>: SubjectSensor}',
+        description='Sensors installed on subject, in format {<subject_sensor_id>: SubjectSensor}',
         validation_alias=AliasChoices('subject sensors', 'sensors'),
     )
 
@@ -111,14 +111,14 @@ class SetupField(BaseModel):
     field_subjects: dict[str, FieldSubject] = Field(
         default_factory=dict,
         title='Field subjects',
-        description='Subjects in field, in format {<id_field_subject>: FieldSubject}',
+        description='Subjects in field, in format {<field_subject_id>: FieldSubject}',
         validation_alias=AliasChoices('field subjects', 'subjects'),
     )
 
     field_sensors: dict[str, FieldSensor] = Field(
         default_factory=dict,
         title='Field sensors',
-        description='Sensors in field, in format {<id_field_sensor>: FieldSensor}',
+        description='Sensors in field, in format {<field_sensor_id>: FieldSensor}',
         validation_alias=AliasChoices('field sensors', 'sensors')
     )
 
@@ -186,7 +186,7 @@ class SetupBase(base.MetadataABC):
     setup_fields: dict[str, SetupField] = Field(
         default_factory=dict,
         title='Setup fields',
-        description='Subject test setup fields, in format {<id_setup_field>: SetupField}',
+        description='Subject test setup fields, in format {<setup_field_id>: SetupField}',
         validation_alias=AliasChoices('setup fields', 'fields'),
         min_length=1,
     )
