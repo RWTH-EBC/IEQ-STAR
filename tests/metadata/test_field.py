@@ -10,6 +10,7 @@ class TestInstantiation:
         """Instantiation of FieldBase from a dictionary"""
         field = FieldBase(**valid_data_field)
         assert field.ieq_star_version == __version__
+        assert field.name == "Test field"
         assert field.length == 2.0
         assert field.width == 2.0
         assert field.height == 2.5

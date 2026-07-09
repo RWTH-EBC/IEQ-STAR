@@ -4,6 +4,11 @@ from . import base
 
 
 class FieldBase(base.MetadataABC):
+    name: str = Field(
+        title='Name',
+        description='Field name (required)',
+    )
+
     length: float = Field(
         title='Length',
         description='Field length (required field)',

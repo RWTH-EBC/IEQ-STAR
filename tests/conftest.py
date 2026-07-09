@@ -49,7 +49,7 @@ def valid_data_sensor_co2() -> dict:
             },
         },
         'sensing_technology': 'NDIR',
-        'note': 'Operating tempearture -5 °C to +50 °C',
+        'note': 'Operating temperature -5 °C to +50 °C',
         'calibration_date': '2026-01-01',
     }
 
@@ -111,6 +111,7 @@ def valid_data_multi_sensor(valid_data_sensor_temperature) -> dict:
 def valid_data_field() -> dict:
     """Valid data of a field"""
     return {
+        'name': 'Test field',
         'length': 2.0,
         'width': 2.0,
         'height': 2.5,
