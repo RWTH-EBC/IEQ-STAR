@@ -1,4 +1,4 @@
-import logging
+import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Union
@@ -8,8 +8,6 @@ from pydantic import TypeAdapter
 from .metadata.field import FieldBase
 from .metadata.sensor import MultiSensorBase, SingleSensorBase
 from .metadata.subject import SubjectBase
-
-logger = logging.getLogger(__name__)
 
 
 class RepositoryABC(ABC):
@@ -55,12 +53,17 @@ class RepositoryMetadata(RepositoryABC):
         """Load a field from the file path"""
         json_str = Path(file_path).read_text(encoding="utf-8")
         sensor_adapter = TypeAdapter(Union[SingleSensorBase, MultiSensorBase])
-        return sensor_adapter.validate_python(json_str)
+        return sensor_adapter.validate_json(json_str)
 
     def save_sensor(self, sensor: SingleSensorBase | MultiSensorBase, sensor_dir: str | Path | None = None) -> None:
         """Save a sensor to the repository"""
+        def clean_txt(txt: str | None) -> str:
+            return "" if txt is None else re.sub(r"[ /_]", "", txt)
+
         json_str = sensor.model_dump_json(indent=2)
-        file_name = f"{sensor.sensor_type}_{sensor.manufacturer}_{sensor.model_name}_{sensor.serial_number}.json"
+        file_name = (f"{sensor.sensor_type}_{clean_txt(sensor.manufacturer)}_{clean_txt(sensor.model_name)}_"
+                     f"{clean_txt(sensor.serial_number)}.json")
+        file_name = file_name.replace(" ", "").replace("/", "")
         file_path = self.sensor_dir / file_name if sensor_dir is None else sensor_dir / file_name
         file_path.write_text(data=json_str, encoding="utf-8")
 

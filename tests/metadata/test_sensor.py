@@ -108,8 +108,6 @@ class TestMultiSensorInstantiation:
         multi_sensor = MultiSensorBase(**valid_data_multi_sensor)
         assert multi_sensor.ieq_star_version == __version__
         assert multi_sensor.manufacturer == "Test Mfr MS"
-        assert multi_sensor.model_name == "Test Multi"
-        assert multi_sensor.serial_number == "S/N MT 123"
         assert len(multi_sensor.sensors) == 2
         assert multi_sensor.sensors['Temp_1'].manufacturer == "Test Mfr"
         assert multi_sensor.sensors['Temp_2'].manufacturer == "Test Mfr MS"

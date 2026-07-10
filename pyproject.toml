@@ -11,9 +11,10 @@ description = "Indoor Environmental Quality – Subject Test Archive and Reposit
 readme = "README.md"
 requires-python = ">=3.9"
 keywords = ["subject test", "data structure"]
-license = "MIT License"
+license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
 ]
 dependencies = [
     "pydantic",
@@ -22,10 +23,16 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[project.urls]
+"Repository" = "https://github.com/RWTH-EBC/IEQ-STAR"
+
 [dependency-groups]
 dev = [
     "pytest"
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "ieqstar.__version__"}
 
 [tool.ruff]
 exclude = [
@@ -70,3 +77,6 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.pytest.ini_options]
+addopts = "--basetemp=./_tmp"

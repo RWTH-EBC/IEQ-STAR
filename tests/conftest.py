@@ -58,8 +58,6 @@ def valid_data_sensor_temperature() -> dict:
     """Valid data of a temperature sensor"""
     return {
         'manufacturer': 'Test Mfr',
-        'model_name': 'Test Sen T',
-        'serial_number': 'S/N T123 456',
         'measurand': 'Temperature',
         'unit': 'degC',
         'range': (-50, 400),

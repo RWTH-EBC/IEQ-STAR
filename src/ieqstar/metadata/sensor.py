@@ -63,6 +63,7 @@ class SensorABC(base.MetadataABC, ABC):
         validation_alias=AliasChoices('mfr.', 'mfr'),
         min_length=1,
         max_length=50,
+        pattern=r"^[\w\-\/ ]+$",
     )
 
     model_name: str | None = Field(
@@ -75,6 +76,7 @@ class SensorABC(base.MetadataABC, ABC):
         ),
         min_length=1,
         max_length=50,
+        pattern=r"^[\w\-\/ ]+$",
     )
 
     serial_number: str | None = Field(
@@ -84,6 +86,7 @@ class SensorABC(base.MetadataABC, ABC):
         validation_alias=AliasChoices('serial number', 'S/N', 'SN'),
         min_length=1,
         max_length=50,
+        pattern=r"^[\w\-\/ ]+$",
     )
 
 
